@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let player2Score = 0;
   let currentPlayer = 1;
   let player1Name, player2Name;
-  let touchStartX, touchStartY;
+  let draggedElement = null;
 
   const startGameButton = document.getElementById('start-game');
   const groundCardsDiv = document.getElementById('ground-cards');
@@ -188,28 +188,38 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   window.touchStart = function(event) {
-    touchStartX = event.touches[0].clientX;
-    touchStartY = event.touches[0].clientY;
     const player = event.target.getAttribute('data-player');
     if ((currentPlayer === 1 && player === 'player1') || (currentPlayer === 2 && player === 'player2')) {
-      event.target.ondragstart = (e) => drag(e);
+      draggedElement = event.target;
+      touchStartX = event.touches[0].clientX;
+      touchStartY = event.touches[0].clientY;
     }
   }
 
   window.touchMove = function(event) {
     event.preventDefault();
     const touch = event.touches[0];
-    const element = document.elementFromPoint(touch.clientX, touch.clientY);
-    if (element && (element.id === 'ground-cards' || element.classList.contains('card'))) {
-      element.ondragover = (e) => allowDrop(e);
-    }
+    draggedElement.style.position = 'absolute';
+    draggedElement.style.left = `${touch.clientX - touchStartX}px`;
+    draggedElement.style.top = `${touch.clientY - touchStartY}px`;
   }
 
   window.touchEnd = function(event) {
     const touch = event.changedTouches[0];
-    const element = document.elementFromPoint(touch.clientX, touch.clientY);
-    if (element && (element.id === 'ground-cards' || element.classList.contains('card'))) {
-      element.ondrop = (e) => drop(e);
+    const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
+    const card = getCardFromElement(draggedElement);
+    const player = draggedElement.getAttribute('data-player');
+
+    if (dropTarget && (dropTarget.id === 'ground-cards' || dropTarget.classList.contains('card'))) {
+      if ((currentPlayer === 1 && player === 'player1') || (currentPlayer === 2 && player === 'player2')) {
+        groundCardsDiv.appendChild(draggedElement);
+        playCard(card, player);
+        switchTurn();
+      }
+    } else {
+      // Reset the card's position if not dropped in a valid area
+      draggedElement.style.position = 'static';
     }
+    draggedElement = null;
   }
 });
