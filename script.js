@@ -7,6 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let player2Score = 0;
   let currentPlayer = 1;
   let player1Name, player2Name;
+  let touchStartX, touchStartY;
 
   const startGameButton = document.getElementById('start-game');
   const groundCardsDiv = document.getElementById('ground-cards');
@@ -70,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderCard(card, player = '') {
     const imgSrc = `PNG-cards-1.3/${card.rank}_of_${card.suit}.png`;
-    return `<img src="${imgSrc}" class="card" id="${card.rank}${card.suit}" data-player="${player}" draggable="true" ondragstart="drag(event)" alt="${card.rank} of ${card.suit}">`;
+    return `<img src="${imgSrc}" class="card" id="${card.rank}${card.suit}" data-player="${player}" draggable="true" ondragstart="drag(event)" ontouchstart="touchStart(event)" ontouchmove="touchMove(event)" ontouchend="touchEnd(event)" alt="${card.rank} of ${card.suit}">`;
   }
 
   function updateScore() {
@@ -113,34 +114,28 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function playCard(card, player) {
-      console.log(`Playing card: ${card.rank}${card.suit} by ${player}`);
-      
-      if (player === 'player1') {
-        console.log('Player 1 cards before:', player1Cards);
-        player1Cards = player1Cards.filter(c => !(c.rank === card.rank && c.suit === card.suit));
-        console.log('Player 1 cards after:', player1Cards);
-      } else if (player === 'player2') {
-        console.log('Player 2 cards before:', player2Cards);
-        player2Cards = player2Cards.filter(c => !(c.rank === card.rank && c.suit === card.suit));
-        console.log('Player 2 cards after:', player2Cards);
-      }
-    
-      let matchingCardIndex = groundCards.findIndex(c => c.rank === card.rank);
-      if (matchingCardIndex !== -1) {
-        let matchingCard = groundCards.splice(matchingCardIndex, 1)[0];
-    
-        if (currentPlayer === 1) {
-          player1Score += getCardValue(matchingCard.rank);
-        } else {
-          player2Score += getCardValue(matchingCard.rank);
-        }
+    if (player === 'player1') {
+      player1Cards = player1Cards.filter(c => !(c.rank === card.rank && c.suit === card.suit));
+    } else if (player === 'player2') {
+      player2Cards = player2Cards.filter(c => !(c.rank === card.rank && c.suit === card.suit));
+    }
+
+    let matchingCardIndex = groundCards.findIndex(c => c.rank === card.rank);
+    if (matchingCardIndex !== -1) {
+      let matchingCard = groundCards.splice(matchingCardIndex, 1)[0];
+
+      if (currentPlayer === 1) {
+        player1Score += getCardValue(matchingCard.rank);
       } else {
-        groundCards.push(card);
+        player2Score += getCardValue(matchingCard.rank);
       }
-    
-      updateScore();
-      checkForWinner();
-      renderCards();
+    } else {
+      groundCards.push(card);
+    }
+
+    updateScore();
+    checkForWinner();
+    renderCards();
   }
 
   function getCardValue(rank) {
@@ -172,10 +167,10 @@ document.addEventListener("DOMContentLoaded", () => {
       winner = player2Name;
     }
     if (winner) {
-        winnerMessageDiv.textContent = `The winner is ${winner}!`;
-        alert(winnerMessageDiv.textContent);
-        startGame();
-        disableDragging();
+      winnerMessageDiv.textContent = `The winner is ${winner}!`;
+      alert(winnerMessageDiv.textContent);
+      startGame();
+      disableDragging();
     }
   }
 
@@ -190,5 +185,31 @@ document.addEventListener("DOMContentLoaded", () => {
     allCards.forEach(card => {
       card.setAttribute('draggable', 'false');
     });
+  }
+
+  window.touchStart = function(event) {
+    touchStartX = event.touches[0].clientX;
+    touchStartY = event.touches[0].clientY;
+    const player = event.target.getAttribute('data-player');
+    if ((currentPlayer === 1 && player === 'player1') || (currentPlayer === 2 && player === 'player2')) {
+      event.target.ondragstart = (e) => drag(e);
+    }
+  }
+
+  window.touchMove = function(event) {
+    event.preventDefault();
+    const touch = event.touches[0];
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (element && (element.id === 'ground-cards' || element.classList.contains('card'))) {
+      element.ondragover = (e) => allowDrop(e);
+    }
+  }
+
+  window.touchEnd = function(event) {
+    const touch = event.changedTouches[0];
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (element && (element.id === 'ground-cards' || element.classList.contains('card'))) {
+      element.ondrop = (e) => drop(e);
+    }
   }
 });
